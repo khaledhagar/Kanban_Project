@@ -1,10 +1,11 @@
 # Frontend
 
-A single-board Kanban demo built with Next.js (App Router) and React. Board
-state lives in memory and resets on reload (no backend persistence yet). The app
-is built as a static export (`output: "export"` -> `out/`) and served by FastAPI
-at `/`; there is no Node server in production. Later parts of the plan add a
-login gate, backend persistence, and an AI chat sidebar (see ../docs/PLAN.md).
+A single-board Kanban demo built with Next.js (App Router) and React. The app is
+gated behind a login (see `AuthGate`); board state still lives in memory and
+resets on reload (no backend persistence yet). The app is built as a static
+export (`output: "export"` -> `out/`) and served by FastAPI at `/`; there is no
+Node server in production. Later parts of the plan add backend persistence and an
+AI chat sidebar (see ../docs/PLAN.md).
 
 ## Stack
 
@@ -20,10 +21,12 @@ login gate, backend persistence, and an AI chat sidebar (see ../docs/PLAN.md).
 ## Structure
 
 - `src/app/layout.tsx` - root layout, loads fonts and global CSS, sets metadata.
-- `src/app/page.tsx` - home route; renders `KanbanBoard`.
+- `src/app/page.tsx` - home route; renders `AuthGate`.
 - `src/app/globals.css` - Tailwind import and CSS variable theme tokens.
 - `src/lib/kanban.ts` - data model and pure board logic (no React).
-- `src/components/` - the board UI (see below).
+- `src/lib/api.ts` - thin client for the backend (`getMe`, `login`, `logout`);
+  uses relative `/api` URLs with cookie credentials (same-origin in production).
+- `src/components/` - the board and auth UI (see below).
 - `src/test/setup.ts`, `src/test/vitest.d.ts` - Vitest + Testing Library setup.
 
 ## Data model (`src/lib/kanban.ts`)
@@ -41,7 +44,13 @@ login gate, backend persistence, and an AI chat sidebar (see ../docs/PLAN.md).
 
 ## Components (`src/components/`)
 
-- `KanbanBoard.tsx` - the only stateful component (`"use client"`). Holds
+- `AuthGate.tsx` - top-level gate (`"use client"`). On mount calls `getMe`;
+  shows nothing while loading, `LoginForm` when unauthenticated, and
+  `KanbanBoard` (with an `onLogout` handler) when authenticated.
+- `LoginForm.tsx` - sign-in form; validates non-empty fields, calls `login`,
+  shows an error on failure, and calls `onAuthed` on success.
+- `KanbanBoard.tsx` - the board (`"use client"`). Takes an optional `onLogout`
+  prop; when present, renders a Log out button in the header. Holds
   `BoardData` in `useState(initialData)` and the active drag id. Owns all
   handlers: drag start/end (delegates to `moveCard`), rename column, add card
   (`createId`), edit card, delete card. Sets up `DndContext` with a `PointerSensor`
@@ -76,15 +85,19 @@ callbacks and do not own board state (except `NewCardForm`'s local input state).
 
 - Unit (Vitest, jsdom): `src/**/*.{test,spec}.{ts,tsx}`. Coverage:
   `src/lib/kanban.test.ts` (`moveCard`, `createId`),
-  `src/components/KanbanBoard.test.tsx` (rename, add, edit, delete), and
-  `src/components/KanbanCardPreview.test.tsx`. Config in `vitest.config.ts`;
-  `@` aliases to `src`. Coverage uses the v8 provider with an 80% lines/
-  statements threshold over `src/components` and `src/lib` (the test command
-  fails below it).
-- E2E (Playwright): `tests/kanban.spec.ts` covers load, add, rename, edit,
-  delete, and drag between columns. Config in `playwright.config.ts` runs
-  against the dev server on `127.0.0.1:3000`. Playwright specs live in `tests/`
-  and are excluded from Vitest.
+  `src/components/KanbanBoard.test.tsx` (rename, add, edit, delete),
+  `src/components/KanbanCardPreview.test.tsx`, and the auth flow in
+  `LoginForm.test.tsx` / `AuthGate.test.tsx` (which stub `fetch`, so `api.ts`
+  runs against a fake backend). Config in `vitest.config.ts`; `@` aliases to
+  `src`. Coverage uses the v8 provider with an 80% lines/statements threshold
+  over `src/components` and `src/lib` (the test command fails below it).
+- E2E (Playwright): runs against the production-like server (FastAPI serving the
+  built export) at `127.0.0.1:8000`, started by the `webServer` command in
+  `playwright.config.ts` (`npm run build` then uvicorn with `PM_STATIC_DIR`
+  pointed at `out/`). `auth.spec.ts` covers the login gate and logout;
+  `kanban.spec.ts` covers load, add, rename, edit, delete, and drag (logging in
+  via the API in `beforeEach`). Specs live in `tests/` and are excluded from
+  Vitest.
 
 ## Conventions
 

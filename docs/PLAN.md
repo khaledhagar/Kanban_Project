@@ -151,13 +151,13 @@ Goal: gate the board behind a dummy login (`user` / `password`) with logout.
 
 Checklist:
 
-- [ ] Add backend auth endpoints: `POST /api/login`, `POST /api/logout`,
+- [x] Add backend auth endpoints: `POST /api/login`, `POST /api/logout`,
       `GET /api/me` using a server-set session cookie. Sessions are kept in an
       in-memory store (a token map) for the MVP; not persisted to SQLite.
-- [ ] Validate credentials against hardcoded `user` / `password`.
-- [ ] Frontend: show a login screen at `/` when unauthenticated; show the board
+- [x] Validate credentials against hardcoded `user` / `password`.
+- [x] Frontend: show a login screen at `/` when unauthenticated; show the board
       when authenticated; provide a logout control.
-- [ ] Redirect/guard so the board is not shown without a valid session.
+- [x] Redirect/guard so the board is not shown without a valid session.
 
 Tests:
 

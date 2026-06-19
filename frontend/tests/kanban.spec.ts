@@ -1,5 +1,14 @@
 import { expect, test } from "@playwright/test";
 
+// The board is gated behind login; authenticate via the API so the session
+// cookie is set on the browser context before each board test.
+test.beforeEach(async ({ page }) => {
+  const response = await page.request.post("/api/login", {
+    data: { username: "user", password: "password" },
+  });
+  expect(response.ok()).toBeTruthy();
+});
+
 test("loads the kanban board", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Kanban Studio" })).toBeVisible();
