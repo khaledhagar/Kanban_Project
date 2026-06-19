@@ -180,13 +180,13 @@ for multiple users though the MVP uses one.
 
 Checklist:
 
-- [ ] Propose schema: users, boards (one per user for MVP), and the board
+- [x] Propose schema: users, boards (one per user for MVP), and the board
       payload stored as JSON (columns, cards) mirroring the frontend
       `BoardData` shape.
-- [ ] Document the approach in `docs/DATABASE.md` (tables, columns, JSON shape,
+- [x] Document the approach in `docs/DATABASE.md` (tables, columns, JSON shape,
       why JSON, migration/creation strategy).
-- [ ] Define how a new DB file is created on first run if missing.
-- [ ] Get explicit user sign-off on the schema before Part 6.
+- [x] Define how a new DB file is created on first run if missing.
+- [x] Get explicit user sign-off on the schema before Part 6.
 
 Tests: none (design + docs). Schema is validated by Part 6 tests.
 
