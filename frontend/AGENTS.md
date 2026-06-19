@@ -1,10 +1,10 @@
 # Frontend
 
-A single-board Kanban demo built with Next.js (App Router) and React. This is
-currently a pure client-side demo: all board state lives in memory and resets on
-reload. There is no auth, persistence, or backend wiring yet. Later parts of the
-plan add static export, a login gate, backend persistence, and an AI chat
-sidebar (see ../docs/PLAN.md).
+A single-board Kanban demo built with Next.js (App Router) and React. Board
+state lives in memory and resets on reload (no backend persistence yet). The app
+is built as a static export (`output: "export"` -> `out/`) and served by FastAPI
+at `/`; there is no Node server in production. Later parts of the plan add a
+login gate, backend persistence, and an AI chat sidebar (see ../docs/PLAN.md).
 
 ## Stack
 
@@ -13,7 +13,9 @@ sidebar (see ../docs/PLAN.md).
   in `src/app/globals.css`.
 - Drag and drop with `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`.
 - `clsx` for conditional class names.
-- Fonts: Space Grotesk (display) and Manrope (body) via `next/font/google`.
+- Fonts: Space Grotesk (display) and Manrope (body), self-hosted via
+  `next/font/local` from `src/app/fonts/*.woff2`. They are not fetched from
+  Google at build/dev time, so the build and tests do not depend on the network.
 
 ## Structure
 
@@ -42,14 +44,17 @@ sidebar (see ../docs/PLAN.md).
 - `KanbanBoard.tsx` - the only stateful component (`"use client"`). Holds
   `BoardData` in `useState(initialData)` and the active drag id. Owns all
   handlers: drag start/end (delegates to `moveCard`), rename column, add card
-  (`createId`), delete card. Sets up `DndContext` with a `PointerSensor`
+  (`createId`), edit card, delete card. Sets up `DndContext` with a `PointerSensor`
   (6px activation) and `closestCorners` collision detection, and renders a
   `DragOverlay` preview.
 - `KanbanColumn.tsx` - one column; a droppable region wrapping a `SortableContext`
   of cards, an editable title input (rename on change), an empty-state, and the
   `NewCardForm`. Exposes `data-testid="column-<id>"`.
 - `KanbanCard.tsx` - a sortable card; whole card is the drag handle. Shows title,
-  details, and a Remove button. Exposes `data-testid="card-<id>"`.
+  details, and Edit and Remove buttons. Edit swaps the card into an inline form
+  (title input + details textarea, Save/Cancel); while editing, the drag
+  listeners are omitted so the inputs are usable. Exposes
+  `data-testid="card-<id>"`.
 - `KanbanCardPreview.tsx` - presentational card used inside the drag overlay.
 - `NewCardForm.tsx` - local open/closed + form state; validates a non-empty
   title, calls `onAdd(title, details)`, then resets and closes.
@@ -69,15 +74,17 @@ callbacks and do not own board state (except `NewCardForm`'s local input state).
 
 ## Tests
 
-- Unit (Vitest, jsdom): `src/**/*.{test,spec}.{ts,tsx}`. Existing coverage:
-  `src/lib/kanban.test.ts` (board logic), `src/components/KanbanBoard.test.tsx`
-  (board interactions). Config in `vitest.config.ts`; `@` aliases to `src`.
-  Coverage uses the v8 provider; no minimum threshold is set yet (the plan
-  requires adding an 80% floor).
-- E2E (Playwright): `tests/kanban.spec.ts` covers load, add card, and drag
-  between columns. Config in `playwright.config.ts` runs against the dev server
-  on `127.0.0.1:3000`. Playwright specs live in `tests/` and are excluded from
-  Vitest.
+- Unit (Vitest, jsdom): `src/**/*.{test,spec}.{ts,tsx}`. Coverage:
+  `src/lib/kanban.test.ts` (`moveCard`, `createId`),
+  `src/components/KanbanBoard.test.tsx` (rename, add, edit, delete), and
+  `src/components/KanbanCardPreview.test.tsx`. Config in `vitest.config.ts`;
+  `@` aliases to `src`. Coverage uses the v8 provider with an 80% lines/
+  statements threshold over `src/components` and `src/lib` (the test command
+  fails below it).
+- E2E (Playwright): `tests/kanban.spec.ts` covers load, add, rename, edit,
+  delete, and drag between columns. Config in `playwright.config.ts` runs
+  against the dev server on `127.0.0.1:3000`. Playwright specs live in `tests/`
+  and are excluded from Vitest.
 
 ## Conventions
 

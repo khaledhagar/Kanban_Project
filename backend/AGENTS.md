@@ -13,12 +13,15 @@ container. Managed with `uv` (Python 3.13).
 
 ## Structure
 
-- `app/main.py` - the FastAPI app. Defines `GET /api/health` and mounts the
-  static site. The static mount is registered last so `/api` routes take
-  precedence over the catch-all at `/`.
-- `static/` - files served at `/` (`html=True`, so `/` returns `index.html`).
-  Currently a placeholder hello-world page; Part 3 replaces it with the exported
-  Next.js bundle.
+- `app/main.py` - `create_app(static_dir=DEFAULT_STATIC_DIR)` builds the FastAPI
+  app: defines `GET /api/health` and mounts the static site. The static mount is
+  registered last so `/api` routes take precedence over the catch-all at `/`.
+  The factory lets tests serve a fixture directory; `app = create_app()` is the
+  production instance. `STATIC_DIR` resolves to `backend/static`.
+- `static/` - files served at `/` (`html=True`, so `/` returns `index.html`,
+  and `/_next/...` assets resolve to files). In the Docker image this directory
+  is replaced by the exported Next.js bundle (`frontend/out`); the committed
+  `index.html` is only a dev fallback for running the backend standalone.
 - `tests/` - `test_health.py` (health route) and `test_static.py` (root page).
 - `pyproject.toml` - project metadata, deps, and tool config. `package = false`
   (this is an application, not a library); `pythonpath = ["."]` makes `app`
@@ -40,6 +43,9 @@ Run from `backend/`:
 ## Tests
 
 - Unit: `GET /api/health` returns 200 and `{"status": "ok"}`.
-- Integration: `GET /` returns 200 HTML containing the hello-world marker.
+- Integration (`test_serves_app_shell_and_next_asset`): builds the app over a
+  temp fixture dir mirroring the export shape (an `index.html` shell plus a
+  `/_next/static` asset) and asserts the shell serves, the asset returns 200,
+  `/api/health` still wins over the catch-all, and unknown paths 404.
 - Coverage floor is 80% (`--cov-fail-under=80` in `pyproject.toml`); the current
   suite covers 100% of `app`.

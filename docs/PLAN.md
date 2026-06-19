@@ -115,16 +115,16 @@ and served by FastAPI at `/`.
 
 Checklist:
 
-- [ ] Set Next.js `output: "export"` and confirm the demo board builds to a
+- [x] Set Next.js `output: "export"` and confirm the demo board builds to a
       static bundle.
-- [ ] Wire the build so FastAPI serves the exported assets at `/` (and static
+- [x] Wire the build so FastAPI serves the exported assets at `/` (and static
       file routing for `_next` assets).
-- [ ] Update start script to build the frontend before/within the image.
-- [ ] Add inline card editing (edit an existing card's title/details) to the
+- [x] Update start script to build the frontend before/within the image.
+- [x] Add inline card editing (edit an existing card's title/details) to the
       demo; this satisfies the "cards can be edited" business requirement, which
       the current demo does not yet cover.
-- [ ] Keep board state client-side for now (no backend persistence yet).
-- [ ] Add Vitest coverage thresholds (>= 80%) to `vitest.config.ts`.
+- [x] Keep board state client-side for now (no backend persistence yet).
+- [x] Add Vitest coverage thresholds (>= 80%) to `vitest.config.ts`.
 
 Tests:
 

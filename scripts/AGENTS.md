@@ -8,6 +8,9 @@ the same thing.
 
 - `start.sh` / `start.ps1` - build the image from the repo-root `Dockerfile`,
   remove any existing `pm-mvp` container, then run a new one. Prints the URL.
+  The `Dockerfile` is multi-stage: it builds the Next.js static export, then
+  copies it into the FastAPI runtime image, so no separate frontend build step
+  is needed.
 - `stop.sh` / `stop.ps1` - stop and remove the `pm-mvp` container (no-op if it is
   not running).
 

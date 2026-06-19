@@ -1,14 +1,28 @@
+# --- Stage 1: build the static Next.js export ---
+FROM node:22-bookworm-slim AS frontend
+
+WORKDIR /frontend
+
+# Install deps first for layer caching.
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+
+COPY frontend/ ./
+RUN npm run build
+# Produces /frontend/out (output: "export").
+
+# --- Stage 2: FastAPI runtime ---
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 
 WORKDIR /app
 
-# Install dependencies first so this layer is cached unless the lockfile changes.
+# Install Python dependencies first for layer caching.
 COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-dev
 
-# Application code and the static site it serves.
+# Application code, and the exported frontend served at /.
 COPY backend/app ./app
-COPY backend/static ./static
+COPY --from=frontend /frontend/out ./static
 
 EXPOSE 8000
 

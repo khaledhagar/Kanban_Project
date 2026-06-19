@@ -19,6 +19,31 @@ describe("KanbanBoard", () => {
     expect(input).toHaveValue("New Name");
   });
 
+  it("edits an existing card", async () => {
+    render(<KanbanBoard />);
+    const column = getFirstColumn();
+
+    await userEvent.click(
+      within(column).getByRole("button", { name: /edit align roadmap themes/i })
+    );
+
+    const titleInput = within(column).getByLabelText("Card title");
+    await userEvent.clear(titleInput);
+    await userEvent.type(titleInput, "Updated title");
+
+    const detailsInput = within(column).getByLabelText("Card details");
+    await userEvent.clear(detailsInput);
+    await userEvent.type(detailsInput, "Updated details");
+
+    await userEvent.click(within(column).getByRole("button", { name: /save/i }));
+
+    expect(within(column).getByText("Updated title")).toBeInTheDocument();
+    expect(within(column).getByText("Updated details")).toBeInTheDocument();
+    expect(
+      within(column).queryByText("Align roadmap themes")
+    ).not.toBeInTheDocument();
+  });
+
   it("adds and removes a card", async () => {
     render(<KanbanBoard />);
     const column = getFirstColumn();
