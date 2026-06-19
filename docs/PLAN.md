@@ -82,15 +82,15 @@ page and answers one API call locally.
 
 Checklist:
 
-- [ ] Create `backend/` FastAPI app managed with `uv` (`pyproject.toml`,
+- [x] Create `backend/` FastAPI app managed with `uv` (`pyproject.toml`,
       pinned deps).
-- [ ] Add a `GET /api/health` route returning JSON `{ "status": "ok" }`.
-- [ ] Serve a static `index.html` ("hello world") at `/` from FastAPI.
-- [ ] Write a `Dockerfile` (and `compose` if helpful) using `uv` to install and
+- [x] Add a `GET /api/health` route returning JSON `{ "status": "ok" }`.
+- [x] Serve a static `index.html` ("hello world") at `/` from FastAPI.
+- [x] Write a `Dockerfile` (and `compose` if helpful) using `uv` to install and
       run the app.
-- [ ] Write `scripts/start` and `scripts/stop` for Mac, PC, and Linux that
+- [x] Write `scripts/start` and `scripts/stop` for Mac, PC, and Linux that
       build/run and stop the container.
-- [ ] Update `backend/AGENTS.md` and `scripts/AGENTS.md`.
+- [x] Update `backend/AGENTS.md` and `scripts/AGENTS.md`.
 
 Tests:
 
