@@ -260,14 +260,15 @@ Goal: prove the backend can call OpenRouter.
 
 Checklist:
 
-- [ ] Add a backend AI client using `OPENROUTER_API_KEY` and model
+- [x] Add a backend AI client using `OPENROUTER_API_KEY` and model
       `openai/gpt-oss-120b`.
-- [ ] Add an internal/diagnostic path that asks the model "2+2" and returns the
+- [x] Add an internal/diagnostic path that asks the model "2+2" and returns the
       answer.
-- [ ] Fail clearly if the key is missing (no silent fallback).
-- [ ] While connected, verify whether `openai/gpt-oss-120b` on OpenRouter
+- [x] Fail clearly if the key is missing (no silent fallback).
+- [x] While connected, verify whether `openai/gpt-oss-120b` on OpenRouter
       honors strict Structured Outputs (JSON schema). Record the result; this
-      de-risks Part 9 before it is built.
+      de-risks Part 9 before it is built. (Live run 2026-06-22: CONFIRMED it
+      honors strict Structured Outputs; recorded in `docs/AI.md`.)
 
 Tests:
 

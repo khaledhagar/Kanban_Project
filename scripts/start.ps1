@@ -10,6 +10,13 @@ $Root = Split-Path -Parent $PSScriptRoot
 
 docker build -t $Image $Root
 try { docker rm -f $Container 2>$null | Out-Null } catch {}
-docker run -d --name $Container -p "${Port}:8000" -v pm-data:/app/data $Image
+
+# Pass the OpenRouter key (and any other vars) from the root .env if present;
+# it is intentionally excluded from the image. The app runs without it, but the
+# AI features need it.
+$EnvArgs = @()
+$EnvFile = Join-Path $Root ".env"
+if (Test-Path $EnvFile) { $EnvArgs = @("--env-file", $EnvFile) }
+docker run -d --name $Container -p "${Port}:8000" -v pm-data:/app/data @EnvArgs $Image
 
 Write-Host "Running at http://localhost:$Port (health: http://localhost:$Port/api/health)"

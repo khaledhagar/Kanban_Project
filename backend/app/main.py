@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app import db
+from app.ai import router as ai_router
 from app.auth import router as auth_router
 from app.board import router as board_router
 
@@ -26,6 +27,7 @@ def create_app(
 
     app.include_router(auth_router)
     app.include_router(board_router)
+    app.include_router(ai_router)
 
     # Serve the static site last so /api routes take precedence over the
     # catch-all at /. In production this directory holds the exported Next.js

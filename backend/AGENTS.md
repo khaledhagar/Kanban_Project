@@ -39,6 +39,13 @@ container. Managed with `uv` (Python 3.13).
   yielding a connection from `app.state.db_path`. Routes depend on
   `current_user`, so they 401 without a session. Pydantic `Board`/`Column`/`Card`
   models validate the top-level shape on `PUT`; the JSON is stored verbatim.
+- `app/ai.py` - OpenRouter client and diagnostic route. `ask(prompt)` POSTs to
+  the OpenAI-compatible Chat Completions API (`MODEL = openai/gpt-oss-120b`)
+  using `OPENROUTER_API_KEY`, returning the reply text; a missing key raises
+  `AIError`. `GET /api/ai/health` (auth-gated) asks "2+2" and returns the answer,
+  or 503 if the key is missing. Loads the root `.env` on import so the key is
+  found locally; in Docker the key is passed via `--env-file`. See
+  `docs/AI.md` (includes the Structured Outputs verification for Part 9).
 - `static/` - files served at `/` (`html=True`, so `/` returns `index.html`,
   and `/_next/...` assets resolve to files). In the Docker image this directory
   is replaced by the exported Next.js bundle (`frontend/out`); the committed
@@ -61,6 +68,8 @@ container. Managed with `uv` (Python 3.13).
   first read); 401 without a session.
 - `PUT /api/board` `{columns, cards}` -> replaces the whole board blob and
   returns it; 401 without a session.
+- `GET /api/ai/health` -> `{answer}` from a live "2+2" model call; 401 without a
+  session, 503 if `OPENROUTER_API_KEY` is missing.
 - `GET /` (and other non-`/api` paths) -> static files from `static/`.
 
 ## Commands
@@ -83,5 +92,9 @@ Run from `backend/`:
 - Board (`test_board.py`): a signed-in user reads the seeded board, an update
   round-trips, the routes 401 without a session, and a board edit survives a
   fresh `create_app` over the same temp DB file (auto-created on demand).
+- AI (`test_ai.py`): mocked unit tests for request building, reply parsing,
+  missing-key error, and the diagnostic route (auth gate, answer, 503). Two
+  opt-in live tests (2+2 and Structured Outputs) are skipped unless
+  `OPENROUTER_API_KEY` and `RUN_LIVE_AI` are both set.
 - Coverage floor is 80% (`--cov-fail-under=80` in `pyproject.toml`); the current
   suite covers 100% of `app`.
