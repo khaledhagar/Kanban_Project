@@ -290,17 +290,19 @@ reply and an optional board update.
 
 Checklist:
 
-- [ ] Define the Structured Output schema: `{ reply: string, board_update?:
-      BoardData | patch }`.
-- [ ] Build the request: system context + board JSON + conversation history +
+- [x] Define the Structured Output schema: `{ reply: string, board_update?:
+      BoardData | patch }`. (Full board replace; cards exchanged as an array
+      because strict schemas cannot express the storage map's dynamic keys.)
+- [x] Build the request: system context + board JSON + conversation history +
       user message.
-- [ ] Request strict Structured Outputs when Part 8 confirmed the model
+- [x] Request strict Structured Outputs when Part 8 confirmed the model
       supports it; otherwise fall back to JSON mode with the same schema. Either
       way, validate the parsed response against the schema server-side and
-      repair/reject malformed output rather than trusting the model.
-- [ ] Parse and validate the structured response; apply `board_update` to the
+      repair/reject malformed output rather than trusting the model. (Strict
+      requested; server validates via the `Board` model.)
+- [x] Parse and validate the structured response; apply `board_update` to the
       stored board when present.
-- [ ] Reject/ignore malformed updates safely (root-cause any schema mismatch).
+- [x] Reject/ignore malformed updates safely (root-cause any schema mismatch).
 
 Tests:
 
