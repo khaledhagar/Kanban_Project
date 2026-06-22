@@ -13,6 +13,7 @@ import {
 } from "@dnd-kit/core";
 import { KanbanColumn } from "@/components/KanbanColumn";
 import { KanbanCardPreview } from "@/components/KanbanCardPreview";
+import { ChatSidebar } from "@/components/ChatSidebar";
 import { getBoard, saveBoard } from "@/lib/api";
 import { createId, moveCard, type BoardData } from "@/lib/kanban";
 
@@ -46,6 +47,13 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
   // Apply a pure update to the loaded board; the effect above persists it.
   const mutate = (updater: (prev: BoardData) => BoardData) => {
     setBoard((prev) => (prev ? updater(prev) : prev));
+  };
+
+  // Adopt a board the backend already persisted (e.g. an AI update). Setting
+  // the persisted ref first makes the save effect skip, avoiding a redundant PUT.
+  const applyServerBoard = (next: BoardData) => {
+    persisted.current = next;
+    setBoard(next);
   };
 
   const sensors = useSensors(
@@ -221,6 +229,8 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
           </DragOverlay>
         </DndContext>
       </main>
+
+      <ChatSidebar onBoardUpdate={applyServerBoard} />
     </div>
   );
 };

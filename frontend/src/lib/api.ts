@@ -49,3 +49,22 @@ export async function saveBoard(board: BoardData): Promise<void> {
     throw new Error("Failed to save board");
   }
 }
+
+export type ChatTurn = { role: "user" | "assistant"; content: string };
+export type ChatResponse = { reply: string; board: BoardData };
+
+export async function sendChat(
+  message: string,
+  history: ChatTurn[]
+): Promise<ChatResponse> {
+  const response = await fetch("/api/ai/chat", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, history }),
+  });
+  if (!response.ok) {
+    throw new Error("Chat failed");
+  }
+  return response.json();
+}

@@ -3,9 +3,10 @@
 A single-board Kanban built with Next.js (App Router) and React. The app is
 gated behind a login (see `AuthGate`); once signed in, the board is loaded from
 and persisted to the backend (`GET`/`PUT /api/board`), so edits survive reloads
-and restarts. The app is built as a static export (`output: "export"` -> `out/`)
-and served by FastAPI at `/`; there is no Node server in production. A later part
-of the plan adds an AI chat sidebar (see ../docs/PLAN.md).
+and restarts. An AI chat sidebar (`ChatSidebar`) can read and change the board;
+when the assistant returns an update the board UI refreshes automatically. The
+app is built as a static export (`output: "export"` -> `out/`) and served by
+FastAPI at `/`; there is no Node server in production.
 
 ## Stack
 
@@ -25,9 +26,10 @@ of the plan adds an AI chat sidebar (see ../docs/PLAN.md).
 - `src/app/globals.css` - Tailwind import and CSS variable theme tokens.
 - `src/lib/kanban.ts` - data model and pure board logic (no React).
 - `src/lib/api.ts` - thin client for the backend (`getMe`, `login`, `logout`,
-  `getBoard`, `saveBoard`); uses relative `/api` URLs with cookie credentials
-  (same-origin in production). `getBoard` returns the user's `BoardData`;
-  `saveBoard` PUTs the whole board as JSON.
+  `getBoard`, `saveBoard`, `sendChat`); uses relative `/api` URLs with cookie
+  credentials (same-origin in production). `getBoard` returns the user's
+  `BoardData`; `saveBoard` PUTs the whole board as JSON; `sendChat(message,
+  history)` POSTs to `/api/ai/chat` and returns `{ reply, board }`.
 - `src/components/` - the board and auth UI (see below).
 - `src/test/setup.ts`, `src/test/vitest.d.ts` - Vitest + Testing Library setup.
 
@@ -61,7 +63,15 @@ of the plan adds an AI chat sidebar (see ../docs/PLAN.md).
   board). Owns all handlers: drag start/end (delegates to `moveCard`), rename
   column, add card (`createId`), edit card, delete card. Sets up `DndContext`
   with a `PointerSensor` (6px activation) and `closestCorners` collision
-  detection, and renders a `DragOverlay` preview.
+  detection, and renders a `DragOverlay` preview. Also renders `ChatSidebar` and
+  passes `applyServerBoard`, which adopts a board the backend already persisted
+  (sets the `persisted` ref first so the save effect skips the redundant PUT).
+- `ChatSidebar.tsx` - the AI chat (`"use client"`). A fixed bottom-right panel
+  toggled open/closed. Holds the message list, input, and a sending flag. On
+  submit it sends the message plus the prior turns as `history` to `sendChat`,
+  appends the reply, and calls `onBoardUpdate(board)` so the board refreshes from
+  the persisted state; a failed call shows an inline error and does not touch the
+  board. Styled to the color scheme (purple submit, blue user bubbles).
 - `KanbanColumn.tsx` - one column; a droppable region wrapping a `SortableContext`
   of cards, an editable title input (rename on change), an empty-state, and the
   `NewCardForm`. Exposes `data-testid="column-<id>"`.
@@ -94,9 +104,12 @@ callbacks and do not own board state (except `NewCardForm`'s local input state).
   `src/lib/api.test.ts` (`getBoard`/`saveBoard` request shape and error paths),
   `src/components/KanbanBoard.test.tsx` (stubs `fetch` so the board loads from a
   fake backend, then rename/add/edit/delete and asserts mutations PUT the full
-  board), `src/components/KanbanCardPreview.test.tsx`, and the auth flow in
-  `LoginForm.test.tsx` / `AuthGate.test.tsx` (which stub `fetch`, so `api.ts`
-  runs against a fake backend). Config in `vitest.config.ts`; `@` aliases to
+  board), `src/components/KanbanCardPreview.test.tsx`,
+  `src/components/ChatSidebar.test.tsx` (stubs `fetch`: sends message + history,
+  renders the reply, refreshes the board via `onBoardUpdate`, shows an error on
+  failure), and the auth flow in `LoginForm.test.tsx` / `AuthGate.test.tsx`
+  (which stub `fetch`, so `api.ts` runs against a fake backend). Config in
+  `vitest.config.ts`; `@` aliases to
   `src`. Coverage uses the v8 provider with an 80% lines/statements threshold
   over `src/components` and `src/lib` (the test command fails below it).
 - E2E (Playwright): runs against the production-like server (FastAPI serving the
@@ -104,8 +117,10 @@ callbacks and do not own board state (except `NewCardForm`'s local input state).
   `playwright.config.ts` (`npm run build` then uvicorn with `PM_STATIC_DIR`
   pointed at `out/` and `PM_DB_PATH` pointed at a temp file so persistence does
   not touch the dev DB). `auth.spec.ts` covers the login gate and logout;
-  `kanban.spec.ts` covers load, add, rename, edit, delete, drag, and persistence
-  across a reload and a fresh session. Because the board is now shared server
+  `kanban.spec.ts` covers load, add, rename, edit, delete, drag, persistence
+  across a reload and a fresh session, and an AI chat turn (mocking
+  `/api/ai/chat` so the assistant returns a board update and the board refreshes
+  without reload). Because the board is now shared server
   state (one row for the single MVP user), `kanban.spec.ts` resets it to the seed
   via the API in `beforeEach`, and the suite runs serially (`workers: 1`) so
   parallel tests do not race on that row. Specs live in `tests/` and are excluded

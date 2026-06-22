@@ -325,11 +325,11 @@ UI refresh when it does.
 
 Checklist:
 
-- [ ] Build a sidebar chat widget styled to the color scheme in `AGENTS.md`.
-- [ ] Send user messages (with history) to the Part 9 endpoint; render replies.
-- [ ] When the response includes a board update, refresh the board UI
+- [x] Build a sidebar chat widget styled to the color scheme in `AGENTS.md`.
+- [x] Send user messages (with history) to the Part 9 endpoint; render replies.
+- [x] When the response includes a board update, refresh the board UI
       automatically from the persisted state.
-- [ ] Keep the layout responsive and uncluttered.
+- [x] Keep the layout responsive and uncluttered.
 
 Tests:
 

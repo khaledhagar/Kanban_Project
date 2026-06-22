@@ -95,6 +95,36 @@ test("persists changes across a reload and a fresh session", async ({ page }) =>
   await fresh.close();
 });
 
+test("chats with the assistant and the board updates without reload", async ({
+  page,
+}) => {
+  // Mock the structured AI response: a reply plus a board with a new card.
+  const updated = structuredClone(initialData);
+  updated.cards["card-ai"] = {
+    id: "card-ai",
+    title: "AI added card",
+    details: "Created by the assistant.",
+  };
+  updated.columns[0].cardIds = [...updated.columns[0].cardIds, "card-ai"];
+
+  await page.route("**/api/ai/chat", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ reply: "Added a card for you.", board: updated }),
+    })
+  );
+
+  await page.goto("/");
+  await page.getByRole("button", { name: /open assistant/i }).click();
+  await page.getByLabel("Message").fill("add a card to backlog");
+  await page.getByRole("button", { name: /send/i }).click();
+
+  await expect(page.getByText("Added a card for you.")).toBeVisible();
+  // The board refreshed automatically, no manual reload.
+  await expect(page.getByText("AI added card")).toBeVisible();
+});
+
 test("moves a card between columns", async ({ page }) => {
   await page.goto("/");
   const card = page.getByTestId("card-card-1");
