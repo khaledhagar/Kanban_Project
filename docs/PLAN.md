@@ -26,14 +26,15 @@ fixes only).
 These are global requirements, not a single part. Each part is only "done" when
 they hold for the code that part touches.
 
-- Unit coverage floor: minimum 80% (lines/statements) per package, enforced in
+- Unit coverage floor: minimum 90% (lines/statements) per package, enforced in
   config so the test command fails below the threshold.
-  - Frontend: Vitest v8 coverage thresholds in `vitest.config.ts`.
-  - Backend: `pytest-cov` with `--cov-fail-under=80` in pytest config.
-  - 80% is a floor, not a target. Write tests for behavior worth protecting
+  - Frontend: Vitest v8 coverage thresholds in `vitest.config.ts` (lines,
+    statements, functions, branches).
+  - Backend: `pytest-cov` with `--cov-fail-under=90` in pytest config.
+  - 90% is a floor, not a target. Write tests for behavior worth protecting
     (real logic, boundaries, regressions), not to pad the number. Do not add
     low-value tests just to lift coverage; if meaningful tests already clear
-    80%, that is enough. If hitting 80% would require contrived tests, prefer
+    90%, that is enough. If hitting 90% would require contrived tests, prefer
     simplifying or removing untested-but-trivial code over testing it.
 - Robust integration testing: every feature that crosses a boundary (HTTP API,
   database, AI provider, static serving) has at least one integration test that

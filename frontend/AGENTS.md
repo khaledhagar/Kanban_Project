@@ -108,10 +108,15 @@ callbacks and do not own board state (except `NewCardForm`'s local input state).
   `src/components/ChatSidebar.test.tsx` (stubs `fetch`: sends message + history,
   renders the reply, refreshes the board via `onBoardUpdate`, shows an error on
   failure), and the auth flow in `LoginForm.test.tsx` / `AuthGate.test.tsx`
-  (which stub `fetch`, so `api.ts` runs against a fake backend). Config in
-  `vitest.config.ts`; `@` aliases to
-  `src`. Coverage uses the v8 provider with an 80% lines/statements threshold
-  over `src/components` and `src/lib` (the test command fails below it).
+  (which stub `fetch`, so `api.ts` runs against a fake backend),
+  `NewCardForm.test.tsx` (whitespace-title rejection, trimming, cancel reset),
+  and `KanbanBoard.test.tsx` also covers the loading placeholder, rejecting an
+  edit that blanks a title, the empty-column state, and applying an AI board
+  update without a redundant save. Config in `vitest.config.ts`; `@` aliases to
+  `src`. Coverage uses the v8 provider with a 90% threshold (lines, statements,
+  functions, branches) over `src/components` and `src/lib`; the test command
+  fails below it. The dnd-kit drag handlers are intentionally covered by e2e
+  rather than unit tests (driving real pointer drag in jsdom would be contrived).
 - E2E (Playwright): runs against the production-like server (FastAPI serving the
   built export) at `127.0.0.1:8000`, started by the `webServer` command in
   `playwright.config.ts` (`npm run build` then uvicorn with `PM_STATIC_DIR`

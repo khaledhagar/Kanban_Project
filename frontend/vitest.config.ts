@@ -13,8 +13,10 @@ export default defineConfig({
       reporter: ["text", "html"],
       include: ["src/components/**", "src/lib/**"],
       thresholds: {
-        lines: 80,
-        statements: 80,
+        lines: 90,
+        statements: 90,
+        functions: 90,
+        branches: 90,
       },
     },
     include: ["src/**/*.{test,spec}.{ts,tsx}"],

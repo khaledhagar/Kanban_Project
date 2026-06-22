@@ -112,5 +112,5 @@ Run from `backend/`:
   the board unchanged on reply-only, and 503s without a key. Two opt-in live
   tests (2+2 and Structured Outputs) are skipped unless `OPENROUTER_API_KEY` and
   `RUN_LIVE_AI` are both set.
-- Coverage floor is 80% (`--cov-fail-under=80` in `pyproject.toml`); the current
+- Coverage floor is 90% (`--cov-fail-under=90` in `pyproject.toml`); the current
   suite covers 100% of `app`.

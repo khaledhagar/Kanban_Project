@@ -4,10 +4,17 @@ import { afterEach, beforeEach, expect, vi } from "vitest";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { initialData, type BoardData } from "@/lib/kanban";
 
-// Stub the board API: GET returns the seeded board, PUT records the payload.
+// Set by a test to make POST /api/ai/chat return a canned structured response.
+let chatReply: { reply: string; board: BoardData } | null = null;
+
+// Stub the board API: GET returns the seeded board, PUT records the payload,
+// POST /api/ai/chat returns the configured chat reply.
 const stubFetch = () => {
   const puts: BoardData[] = [];
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).endsWith("/api/ai/chat")) {
+      return { ok: true, json: async () => chatReply } as unknown as Response;
+    }
     if (init?.method === "PUT") {
       puts.push(JSON.parse(String(init.body)) as BoardData);
       return { ok: true, json: async () => ({ ok: true }) } as unknown as Response;
@@ -29,6 +36,7 @@ const getFirstColumn = () => screen.getAllByTestId(/column-/i)[0];
 let puts: BoardData[];
 
 beforeEach(() => {
+  chatReply = null;
   puts = stubFetch();
 });
 
@@ -114,5 +122,70 @@ describe("KanbanBoard", () => {
     const latest = puts[puts.length - 1];
     expect(latest.columns[0].title).toBe("Renamed");
     expect(latest.cards).toBeTruthy();
+  });
+
+  it("shows a loading placeholder until the board arrives", async () => {
+    // A GET that never resolves keeps the board in its loading state.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise(() => {})) as unknown as typeof fetch
+    );
+    render(<KanbanBoard />);
+    expect(await screen.findByText(/loading board/i)).toBeInTheDocument();
+    expect(screen.queryByTestId(/column-/i)).not.toBeInTheDocument();
+  });
+
+  it("rejects an edit that blanks the card title", async () => {
+    await renderBoard();
+    const column = getFirstColumn();
+    await userEvent.click(
+      within(column).getByRole("button", { name: /edit align roadmap themes/i })
+    );
+
+    const titleInput = within(column).getByLabelText("Card title");
+    await userEvent.clear(titleInput);
+    await userEvent.type(titleInput, "   "); // whitespace only
+    await userEvent.click(within(column).getByRole("button", { name: /save/i }));
+
+    // Save is rejected: still editing, and the original title is unchanged.
+    expect(within(column).getByLabelText("Card title")).toBeInTheDocument();
+    await userEvent.click(within(column).getByRole("button", { name: /cancel/i }));
+    expect(within(column).getByText("Align roadmap themes")).toBeInTheDocument();
+  });
+
+  it("shows an empty-state when a column has no cards", async () => {
+    await renderBoard();
+    const column = getFirstColumn(); // Backlog: card-1, card-2
+    expect(within(column).queryByText(/drop a card here/i)).not.toBeInTheDocument();
+
+    for (const name of [/delete align roadmap themes/i, /delete gather customer signals/i]) {
+      await userEvent.click(within(column).getByRole("button", { name }));
+    }
+
+    expect(within(column).getByText(/drop a card here/i)).toBeInTheDocument();
+  });
+
+  it("applies an AI board update without issuing a redundant save", async () => {
+    await renderBoard();
+    const baselinePuts = puts.length;
+
+    const updated = structuredClone(initialData);
+    updated.cards["card-ai"] = {
+      id: "card-ai",
+      title: "AI made this",
+      details: "From the assistant.",
+    };
+    updated.columns[0].cardIds = [...updated.columns[0].cardIds, "card-ai"];
+    chatReply = { reply: "Sure, added it.", board: updated };
+
+    await userEvent.click(screen.getByRole("button", { name: /open assistant/i }));
+    await userEvent.type(screen.getByLabelText(/message/i), "add a card");
+    await userEvent.click(screen.getByRole("button", { name: /send/i }));
+
+    // Reply renders and the board refreshes from the server's board...
+    expect(await screen.findByText("Sure, added it.")).toBeInTheDocument();
+    expect(await screen.findByText("AI made this")).toBeInTheDocument();
+    // ...without a redundant PUT, since the backend already persisted it.
+    expect(puts.length).toBe(baselinePuts);
   });
 });
