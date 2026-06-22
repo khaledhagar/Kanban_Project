@@ -1,11 +1,11 @@
 # Frontend
 
-A single-board Kanban demo built with Next.js (App Router) and React. The app is
-gated behind a login (see `AuthGate`); board state still lives in memory and
-resets on reload (no backend persistence yet). The app is built as a static
-export (`output: "export"` -> `out/`) and served by FastAPI at `/`; there is no
-Node server in production. Later parts of the plan add backend persistence and an
-AI chat sidebar (see ../docs/PLAN.md).
+A single-board Kanban built with Next.js (App Router) and React. The app is
+gated behind a login (see `AuthGate`); once signed in, the board is loaded from
+and persisted to the backend (`GET`/`PUT /api/board`), so edits survive reloads
+and restarts. The app is built as a static export (`output: "export"` -> `out/`)
+and served by FastAPI at `/`; there is no Node server in production. A later part
+of the plan adds an AI chat sidebar (see ../docs/PLAN.md).
 
 ## Stack
 
@@ -24,8 +24,10 @@ AI chat sidebar (see ../docs/PLAN.md).
 - `src/app/page.tsx` - home route; renders `AuthGate`.
 - `src/app/globals.css` - Tailwind import and CSS variable theme tokens.
 - `src/lib/kanban.ts` - data model and pure board logic (no React).
-- `src/lib/api.ts` - thin client for the backend (`getMe`, `login`, `logout`);
-  uses relative `/api` URLs with cookie credentials (same-origin in production).
+- `src/lib/api.ts` - thin client for the backend (`getMe`, `login`, `logout`,
+  `getBoard`, `saveBoard`); uses relative `/api` URLs with cookie credentials
+  (same-origin in production). `getBoard` returns the user's `BoardData`;
+  `saveBoard` PUTs the whole board as JSON.
 - `src/components/` - the board and auth UI (see below).
 - `src/test/setup.ts`, `src/test/vitest.d.ts` - Vitest + Testing Library setup.
 
@@ -50,12 +52,16 @@ AI chat sidebar (see ../docs/PLAN.md).
 - `LoginForm.tsx` - sign-in form; validates non-empty fields, calls `login`,
   shows an error on failure, and calls `onAuthed` on success.
 - `KanbanBoard.tsx` - the board (`"use client"`). Takes an optional `onLogout`
-  prop; when present, renders a Log out button in the header. Holds
-  `BoardData` in `useState(initialData)` and the active drag id. Owns all
-  handlers: drag start/end (delegates to `moveCard`), rename column, add card
-  (`createId`), edit card, delete card. Sets up `DndContext` with a `PointerSensor`
-  (6px activation) and `closestCorners` collision detection, and renders a
-  `DragOverlay` preview.
+  prop; when present, renders a Log out button in the header. On mount it loads
+  the board via `getBoard` (showing a "Loading board..." placeholder until it
+  arrives) into `useState<BoardData | null>`. All mutations go through a small
+  `mutate(updater)` helper that sets state; a `useEffect` watching `board`
+  persists each change via `saveBoard`, skipping the just-loaded board by
+  comparing against a `persisted` ref (which also avoids resaving an unchanged
+  board). Owns all handlers: drag start/end (delegates to `moveCard`), rename
+  column, add card (`createId`), edit card, delete card. Sets up `DndContext`
+  with a `PointerSensor` (6px activation) and `closestCorners` collision
+  detection, and renders a `DragOverlay` preview.
 - `KanbanColumn.tsx` - one column; a droppable region wrapping a `SortableContext`
   of cards, an editable title input (rename on change), an empty-state, and the
   `NewCardForm`. Exposes `data-testid="column-<id>"`.
@@ -85,8 +91,10 @@ callbacks and do not own board state (except `NewCardForm`'s local input state).
 
 - Unit (Vitest, jsdom): `src/**/*.{test,spec}.{ts,tsx}`. Coverage:
   `src/lib/kanban.test.ts` (`moveCard`, `createId`),
-  `src/components/KanbanBoard.test.tsx` (rename, add, edit, delete),
-  `src/components/KanbanCardPreview.test.tsx`, and the auth flow in
+  `src/lib/api.test.ts` (`getBoard`/`saveBoard` request shape and error paths),
+  `src/components/KanbanBoard.test.tsx` (stubs `fetch` so the board loads from a
+  fake backend, then rename/add/edit/delete and asserts mutations PUT the full
+  board), `src/components/KanbanCardPreview.test.tsx`, and the auth flow in
   `LoginForm.test.tsx` / `AuthGate.test.tsx` (which stub `fetch`, so `api.ts`
   runs against a fake backend). Config in `vitest.config.ts`; `@` aliases to
   `src`. Coverage uses the v8 provider with an 80% lines/statements threshold
@@ -94,10 +102,14 @@ callbacks and do not own board state (except `NewCardForm`'s local input state).
 - E2E (Playwright): runs against the production-like server (FastAPI serving the
   built export) at `127.0.0.1:8000`, started by the `webServer` command in
   `playwright.config.ts` (`npm run build` then uvicorn with `PM_STATIC_DIR`
-  pointed at `out/`). `auth.spec.ts` covers the login gate and logout;
-  `kanban.spec.ts` covers load, add, rename, edit, delete, and drag (logging in
-  via the API in `beforeEach`). Specs live in `tests/` and are excluded from
-  Vitest.
+  pointed at `out/` and `PM_DB_PATH` pointed at a temp file so persistence does
+  not touch the dev DB). `auth.spec.ts` covers the login gate and logout;
+  `kanban.spec.ts` covers load, add, rename, edit, delete, drag, and persistence
+  across a reload and a fresh session. Because the board is now shared server
+  state (one row for the single MVP user), `kanban.spec.ts` resets it to the seed
+  via the API in `beforeEach`, and the suite runs serially (`workers: 1`) so
+  parallel tests do not race on that row. Specs live in `tests/` and are excluded
+  from Vitest.
 
 ## Conventions
 

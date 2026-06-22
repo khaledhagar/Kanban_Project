@@ -233,12 +233,12 @@ persistent.
 
 Checklist:
 
-- [ ] Replace in-memory `initialData` usage with data loaded from
+- [x] Replace in-memory `initialData` usage with data loaded from
       `GET /api/board` after login.
-- [ ] Persist every mutation (move, rename, add, edit, delete) to the backend
+- [x] Persist every mutation (move, rename, add, edit, delete) to the backend
       via `PUT /api/board` (full-board replace).
-- [ ] Handle load/save states simply (no over-engineering).
-- [ ] Ensure static-export build still serves correctly with live API calls.
+- [x] Handle load/save states simply (no over-engineering).
+- [x] Ensure static-export build still serves correctly with live API calls.
 
 Tests:
 

@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, vi } from "vitest";
 import { AuthGate } from "@/components/AuthGate";
+import { initialData } from "@/lib/kanban";
 
 // Route fetch by path so api.ts runs against a fake backend.
 const mockFetch = (authenticated: boolean) =>
@@ -11,6 +12,12 @@ const mockFetch = (authenticated: boolean) =>
       return {
         ok: authenticated,
         json: async () => ({ username: "user" }),
+      } as unknown as Response;
+    }
+    if (url.endsWith("/api/board")) {
+      return {
+        ok: true,
+        json: async () => initialData,
       } as unknown as Response;
     }
     return { ok: true, json: async () => ({ ok: true }) } as unknown as Response;

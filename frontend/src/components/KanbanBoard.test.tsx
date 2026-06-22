@@ -1,17 +1,50 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, expect, vi } from "vitest";
 import { KanbanBoard } from "@/components/KanbanBoard";
+import { initialData, type BoardData } from "@/lib/kanban";
+
+// Stub the board API: GET returns the seeded board, PUT records the payload.
+const stubFetch = () => {
+  const puts: BoardData[] = [];
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (init?.method === "PUT") {
+      puts.push(JSON.parse(String(init.body)) as BoardData);
+      return { ok: true, json: async () => ({ ok: true }) } as unknown as Response;
+    }
+    return { ok: true, json: async () => initialData } as unknown as Response;
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return puts;
+};
+
+// Render and wait for the board to load from the API.
+const renderBoard = async () => {
+  render(<KanbanBoard />);
+  await screen.findAllByTestId(/column-/i);
+};
 
 const getFirstColumn = () => screen.getAllByTestId(/column-/i)[0];
 
+let puts: BoardData[];
+
+beforeEach(() => {
+  puts = stubFetch();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe("KanbanBoard", () => {
-  it("renders five columns", () => {
-    render(<KanbanBoard />);
+  it("loads the board from the API and renders five columns", async () => {
+    await renderBoard();
     expect(screen.getAllByTestId(/column-/i)).toHaveLength(5);
+    expect(puts).toHaveLength(0); // loading alone must not persist
   });
 
   it("renames a column", async () => {
-    render(<KanbanBoard />);
+    await renderBoard();
     const column = getFirstColumn();
     const input = within(column).getByLabelText("Column title");
     await userEvent.clear(input);
@@ -20,7 +53,7 @@ describe("KanbanBoard", () => {
   });
 
   it("edits an existing card", async () => {
-    render(<KanbanBoard />);
+    await renderBoard();
     const column = getFirstColumn();
 
     await userEvent.click(
@@ -45,7 +78,7 @@ describe("KanbanBoard", () => {
   });
 
   it("adds and removes a card", async () => {
-    render(<KanbanBoard />);
+    await renderBoard();
     const column = getFirstColumn();
     const addButton = within(column).getByRole("button", {
       name: /add a card/i,
@@ -67,5 +100,19 @@ describe("KanbanBoard", () => {
     await userEvent.click(deleteButton);
 
     expect(within(column).queryByText("New card")).not.toBeInTheDocument();
+  });
+
+  it("persists each mutation to the backend via PUT", async () => {
+    await renderBoard();
+    const column = getFirstColumn();
+    const input = within(column).getByLabelText("Column title");
+    await userEvent.clear(input);
+    await userEvent.type(input, "Renamed");
+
+    // The latest PUT carries the full board with the renamed column.
+    await waitFor(() => expect(puts.length).toBeGreaterThan(0));
+    const latest = puts[puts.length - 1];
+    expect(latest.columns[0].title).toBe("Renamed");
+    expect(latest.cards).toBeTruthy();
   });
 });

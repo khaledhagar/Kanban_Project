@@ -1,12 +1,16 @@
 import { expect, test } from "@playwright/test";
+import { initialData } from "../src/lib/kanban";
 
-// The board is gated behind login; authenticate via the API so the session
-// cookie is set on the browser context before each board test.
+// The board now persists to SQLite, so reset it to the seed before each test to
+// keep the suite deterministic across reruns. Authenticate via the API first so
+// the session cookie is set on the browser context (and shared by page.request).
 test.beforeEach(async ({ page }) => {
-  const response = await page.request.post("/api/login", {
+  const login = await page.request.post("/api/login", {
     data: { username: "user", password: "password" },
   });
-  expect(response.ok()).toBeTruthy();
+  expect(login.ok()).toBeTruthy();
+  const reset = await page.request.put("/api/board", { data: initialData });
+  expect(reset.ok()).toBeTruthy();
 });
 
 test("loads the kanban board", async ({ page }) => {
@@ -54,6 +58,41 @@ test("deletes a card", async ({ page }) => {
     .getByRole("button", { name: "Delete Gather customer signals", exact: true })
     .click();
   await expect(firstColumn.getByText("Gather customer signals")).toHaveCount(0);
+});
+
+test("persists changes across a reload and a fresh session", async ({ page }) => {
+  await page.goto("/");
+  const firstColumn = page.locator('[data-testid^="column-"]').first();
+  await firstColumn.getByRole("button", { name: /add a card/i }).click();
+  await firstColumn.getByPlaceholder("Card title").fill("Persisted card");
+  await firstColumn.getByPlaceholder("Details").fill("Survives a reload.");
+
+  // Wait for the save to reach the backend before reloading.
+  const saved = page.waitForResponse(
+    (r) => r.url().includes("/api/board") && r.request().method() === "PUT"
+  );
+  await firstColumn.getByRole("button", { name: /add card/i }).click();
+  await saved;
+
+  await page.reload();
+  await expect(
+    page.locator('[data-testid^="column-"]').first().getByText("Persisted card")
+  ).toBeVisible();
+
+  // A fresh session (new context, new login) sees the same persisted board.
+  const fresh = await page.context().browser()!.newContext();
+  const freshPage = await fresh.newPage();
+  await freshPage.request.post("/api/login", {
+    data: { username: "user", password: "password" },
+  });
+  await freshPage.goto("/");
+  await expect(
+    freshPage
+      .locator('[data-testid^="column-"]')
+      .first()
+      .getByText("Persisted card")
+  ).toBeVisible();
+  await fresh.close();
 });
 
 test("moves a card between columns", async ({ page }) => {

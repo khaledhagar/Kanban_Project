@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -13,15 +13,40 @@ import {
 } from "@dnd-kit/core";
 import { KanbanColumn } from "@/components/KanbanColumn";
 import { KanbanCardPreview } from "@/components/KanbanCardPreview";
-import { createId, initialData, moveCard, type BoardData } from "@/lib/kanban";
+import { getBoard, saveBoard } from "@/lib/api";
+import { createId, moveCard, type BoardData } from "@/lib/kanban";
 
 type KanbanBoardProps = {
   onLogout?: () => void;
 };
 
 export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
-  const [board, setBoard] = useState<BoardData>(() => initialData);
+  const [board, setBoard] = useState<BoardData | null>(null);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  // The board reference last loaded from or saved to the backend. Comparing
+  // against it lets the save effect skip the initial load and avoid resaving
+  // an unchanged board.
+  const persisted = useRef<BoardData | null>(null);
+
+  useEffect(() => {
+    getBoard().then((data) => {
+      persisted.current = data;
+      setBoard(data);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!board || board === persisted.current) {
+      return;
+    }
+    persisted.current = board;
+    void saveBoard(board);
+  }, [board]);
+
+  // Apply a pure update to the loaded board; the effect above persists it.
+  const mutate = (updater: (prev: BoardData) => BoardData) => {
+    setBoard((prev) => (prev ? updater(prev) : prev));
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -29,7 +54,7 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
     })
   );
 
-  const cardsById = useMemo(() => board.cards, [board.cards]);
+  const cardsById = useMemo(() => board?.cards ?? {}, [board]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveCardId(event.active.id as string);
@@ -43,14 +68,14 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
       return;
     }
 
-    setBoard((prev) => ({
+    mutate((prev) => ({
       ...prev,
       columns: moveCard(prev.columns, active.id as string, over.id as string),
     }));
   };
 
   const handleRenameColumn = (columnId: string, title: string) => {
-    setBoard((prev) => ({
+    mutate((prev) => ({
       ...prev,
       columns: prev.columns.map((column) =>
         column.id === columnId ? { ...column, title } : column
@@ -60,7 +85,7 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
 
   const handleAddCard = (columnId: string, title: string, details: string) => {
     const id = createId("card");
-    setBoard((prev) => ({
+    mutate((prev) => ({
       ...prev,
       cards: {
         ...prev.cards,
@@ -75,7 +100,7 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
   };
 
   const handleEditCard = (cardId: string, title: string, details: string) => {
-    setBoard((prev) => ({
+    mutate((prev) => ({
       ...prev,
       cards: {
         ...prev.cards,
@@ -89,23 +114,29 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
   };
 
   const handleDeleteCard = (columnId: string, cardId: string) => {
-    setBoard((prev) => {
-      return {
-        ...prev,
-        cards: Object.fromEntries(
-          Object.entries(prev.cards).filter(([id]) => id !== cardId)
-        ),
-        columns: prev.columns.map((column) =>
-          column.id === columnId
-            ? {
-                ...column,
-                cardIds: column.cardIds.filter((id) => id !== cardId),
-              }
-            : column
-        ),
-      };
-    });
+    mutate((prev) => ({
+      ...prev,
+      cards: Object.fromEntries(
+        Object.entries(prev.cards).filter(([id]) => id !== cardId)
+      ),
+      columns: prev.columns.map((column) =>
+        column.id === columnId
+          ? {
+              ...column,
+              cardIds: column.cardIds.filter((id) => id !== cardId),
+            }
+          : column
+      ),
+    }));
   };
+
+  if (!board) {
+    return (
+      <div className="grid min-h-screen place-items-center text-sm text-[var(--gray-text)]">
+        Loading board...
+      </div>
+    );
+  }
 
   const activeCard = activeCardId ? cardsById[activeCardId] : null;
 
