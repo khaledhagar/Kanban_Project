@@ -10,6 +10,6 @@ $Root = Split-Path -Parent $PSScriptRoot
 
 docker build -t $Image $Root
 try { docker rm -f $Container 2>$null | Out-Null } catch {}
-docker run -d --name $Container -p "${Port}:8000" $Image
+docker run -d --name $Container -p "${Port}:8000" -v pm-data:/app/data $Image
 
 Write-Host "Running at http://localhost:$Port (health: http://localhost:$Port/api/health)"

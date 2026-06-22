@@ -202,15 +202,15 @@ created on demand.
 
 Checklist:
 
-- [ ] Implement the schema from Part 5; auto-create the DB and seed the demo
+- [x] Implement the schema from Part 5; auto-create the DB and seed the demo
       board for the user if absent.
-- [ ] `GET /api/board` returns the current user's board JSON.
-- [ ] `PUT /api/board` persists changes by replacing the whole board JSON
+- [x] `GET /api/board` returns the current user's board JSON.
+- [x] `PUT /api/board` persists changes by replacing the whole board JSON
       blob. Granular per-card/column routes are intentionally avoided for the
       MVP to keep persistence simple, since the board is stored as one JSON
       document.
-- [ ] Enforce auth: board routes require a valid session.
-- [ ] Update `backend/AGENTS.md` with data-access description.
+- [x] Enforce auth: board routes require a valid session.
+- [x] Update `backend/AGENTS.md` with data-access description.
 
 Tests:
 

@@ -9,6 +9,6 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 docker build -t "$IMAGE" "$ROOT"
 docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
-docker run -d --name "$CONTAINER" -p "${PORT}:8000" "$IMAGE"
+docker run -d --name "$CONTAINER" -p "${PORT}:8000" -v pm-data:/app/data "$IMAGE"
 
 echo "Running at http://localhost:${PORT} (health: http://localhost:${PORT}/api/health)"
